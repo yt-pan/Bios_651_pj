@@ -1,0 +1,177 @@
+---
+title: "Data_cleaning"
+author: "Yutong Pan"
+date: "2022/4/12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
+library(readr)
+a <- read_csv("pseudo_kidney_transplant_2005.csv")
+```
+
+## remove rows with NA
+```{r}
+a = na.omit(a)
+```
+
+## relabel categorical variables
+```{r}
+# "DON_HIST_DIAB"       Y=1 N=0
+a$DON_HIST_DIAB[which(a$DON_HIST_DIAB=="N")] = 0
+a$DON_HIST_DIAB[which(a$DON_HIST_DIAB=="Y")] = 1
+a$DON_GENDER[which(a$DON_GENDER=="M")] = 0
+a$DON_GENDER[which(a$DON_GENDER=="F")] = 1
+a$REC_GENDER[which(a$REC_GENDER=="M")] = 0
+a$REC_GENDER[which(a$REC_GENDER=="F")] = 1
+#"MISM_GENDER"   Y=1 N=0 (transform)
+a$MISM_GENDER = 0
+a$MISM_GENDER[which(a$DON_GENDER==a$REC_GENDER)] = 0
+a$MISM_GENDER[which(a$DON_GENDER!=a$REC_GENDER)] = 1
+a$DON_HTN[which(a$DON_HTN=="N")] = 0
+a$DON_HTN[which(a$DON_HTN=="Y")] = 1
+a$DON_ECD[which(a$DON_ECD=="N")] = 0
+a$DON_ECD[which(a$DON_ECD=="Y")] = 1
+a$REC_COLD_ISCH_TM_20[which(a$REC_COLD_ISCH_TM_20=="N")] = 0
+a$REC_COLD_ISCH_TM_20[which(a$REC_COLD_ISCH_TM_20=="Y")] = 1
+a$REC_DIAB[which(a$REC_DIAB!='None')] = 1
+a$REC_DIAB[which(a$REC_DIAB=='None')] = 0
+a$DON_RACE[which(a$DON_RACE!='Black')] = 0
+a$DON_RACE[which(a$DON_RACE=='Black')] = 1
+a$REC_RACE[which(a$REC_RACE!='Black')] = 0
+a$REC_RACE[which(a$REC_RACE=='Black')] = 1
+
+# relevel BMI
+a$DON_BMI_C = 0
+a$DON_BMI_C[which(a$DON_BMI<18.5)] = 'Underweight'
+a$DON_BMI_C[which(a$DON_BMI>=18.5 & a$DON_BMI<25)] = 'Healthy'
+a$DON_BMI_C[which(a$DON_BMI>=25 & a$DON_BMI<30)] = 'Overweight'
+a$DON_BMI_C[which(a$DON_BMI>=30)] = 'Obesity'
+a$DON_BMI_C=factor(a$DON_BMI_C,levels=c("Underweight","Healthy",
+                                        "Overweight","Obesity"))
+a$REC_BMI_C = 0
+a$REC_BMI_C[which(a$REC_BMI<18.5)] = 'Underweight'
+a$REC_BMI_C[which(a$REC_BMI>=18.5 & a$REC_BMI<25)] = 'Healthy'
+a$REC_BMI_C[which(a$REC_BMI>=25 & a$REC_BMI<30)] = 'Overweight'
+a$REC_BMI_C[which(a$REC_BMI>=30)] = 'Obesity'
+a$REC_BMI_C=factor(a$REC_BMI_C,levels=c("Underweight","Healthy",
+                                        "Overweight","Obesity"))
+# relevel Age
+# level using :
+# Analysis of OPO Transplant Rates for Potential Donors Stratified by Race and Ethnicity
+a$DON_AGE_C1 = 0
+a$DON_AGE_C1[which(a$DON_AGE<1)] = '<1'
+a$DON_AGE_C1[which(a$DON_AGE>=1&a$DON_AGE<=5)] = '1-5'
+a$DON_AGE_C1[which(a$DON_AGE>=6&a$DON_AGE<=11)] = '6-11'
+a$DON_AGE_C1[which(a$DON_AGE>=12&a$DON_AGE<=17)] = '12-17'
+a$DON_AGE_C1[which(a$DON_AGE>=18&a$DON_AGE<=24)] = '18-24'
+a$DON_AGE_C1[which(a$DON_AGE>=25&a$DON_AGE<=29)] = '25-29'
+a$DON_AGE_C1[which(a$DON_AGE>=30&a$DON_AGE<=34)] = '30-34'
+a$DON_AGE_C1[which(a$DON_AGE>=35&a$DON_AGE<=39)] = '35-39'
+a$DON_AGE_C1[which(a$DON_AGE>=40&a$DON_AGE<=44)] = '40-44'
+a$DON_AGE_C1[which(a$DON_AGE>=45&a$DON_AGE<=49)] = '45-49'
+a$DON_AGE_C1[which(a$DON_AGE>=50&a$DON_AGE<=54)] = '50-54'
+a$DON_AGE_C1[which(a$DON_AGE>=55&a$DON_AGE<=59)] = '55-59'
+a$DON_AGE_C1[which(a$DON_AGE>=60&a$DON_AGE<=64)] = '60-64'
+a$DON_AGE_C1[which(a$DON_AGE>=65&a$DON_AGE<=69)] = '65-69'
+a$DON_AGE_C1[which(a$DON_AGE>=70)] = '>=70'
+a$DON_AGE_C1=factor(a$DON_AGE_C1,levels = c(
+  '<1',  '1-5', '6-11','12-17','18-24','25-29','30-34','35-39',
+  '40-44','45-49','50-54','55-59','60-64','65-69','>=70'
+)) 
+a$REC_AGE_C1 = 0
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX<1)] = '<1'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=1&a$REC_AGE_AT_TX<=5)] = '1-5'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=6&a$REC_AGE_AT_TX<=11)] = '6-11'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=12&a$REC_AGE_AT_TX<=17)] = '12-17'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=18&a$REC_AGE_AT_TX<=24)] = '18-24'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=25&a$REC_AGE_AT_TX<=29)] = '25-29'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=30&a$REC_AGE_AT_TX<=34)] = '30-34'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=35&a$REC_AGE_AT_TX<=39)] = '35-39'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=40&a$REC_AGE_AT_TX<=44)] = '40-44'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=45&a$REC_AGE_AT_TX<=49)] = '45-49'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=50&a$REC_AGE_AT_TX<=54)] = '50-54'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=55&a$REC_AGE_AT_TX<=59)] = '55-59'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=60&a$REC_AGE_AT_TX<=64)] = '60-64'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=65&a$REC_AGE_AT_TX<=69)] = '65-69'
+a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=70)] = '>=70'
+a$REC_AGE_C1=factor(a$REC_AGE_C1,levels = c(
+  '<1',  '1-5', '6-11','12-17','18-24','25-29','30-34','35-39',
+  '40-44','45-49','50-54','55-59','60-64','65-69','>=70'
+)) 
+
+# relevel age 2
+# https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/1722507#ioi130062f2
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3697775/
+
+a$DON_AGE_C2 = 0
+a$DON_AGE_C2[which(a$DON_AGE>=0&a$DON_AGE<=14)] = '0-14'
+a$DON_AGE_C2[which(a$DON_AGE>=15&a$DON_AGE<=18)] = '15-18'
+a$DON_AGE_C2[which(a$DON_AGE>=19&a$DON_AGE<=25)] = '19-25'
+a$DON_AGE_C2[which(a$DON_AGE>=26&a$DON_AGE<=40)] = '26-40'
+a$DON_AGE_C2[which(a$DON_AGE>=41&a$DON_AGE<=55)] = '41-55'
+a$DON_AGE_C2[which(a$DON_AGE>=56&a$DON_AGE<=70)] = '56-70'
+a$DON_AGE_C2[which(a$DON_AGE>=70)] = '>=70'
+a$DON_AGE_C2=factor(a$DON_AGE_C2,levels = c(
+  '0-14', '15-18', '19-25','26-40','41-55','56-70','>=70'
+)) 
+a$REC_AGE_C2 = 0
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=0&a$REC_AGE_AT_TX<=14)] = '0-14'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=15&a$REC_AGE_AT_TX<=18)] = '15-18'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=19&a$REC_AGE_AT_TX<=25)] = '19-25'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=26&a$REC_AGE_AT_TX<=40)] = '26-40'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=41&a$REC_AGE_AT_TX<=55)] = '41-55'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=56&a$REC_AGE_AT_TX<=70)] = '56-70'
+a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=70)] = '>=70'
+a$REC_AGE_C2=factor(a$REC_AGE_C2,levels = c(
+  '0-14', '15-18', '19-25','26-40','41-55','56-70','>=70'
+)) 
+
+# donor age cat 3 
+# follow:
+# https://jasn.asnjournals.org/content/15/4/1086
+a$DON_AGE_C3 = 0
+a$DON_AGE_C3[which(a$DON_AGE>=0&a$DON_AGE<=17)] = '0-17'
+a$DON_AGE_C3[which(a$DON_AGE>=18&a$DON_AGE<=29)] = '28-29'
+a$DON_AGE_C3[which(a$DON_AGE>=30&a$DON_AGE<=41)] = '30-41'
+a$DON_AGE_C3[which(a$DON_AGE>=42&a$DON_AGE<=54)] = '42-54'
+a$DON_AGE_C3[which(a$DON_AGE>=55&a$DON_AGE<=64)] = '55-64'
+a$DON_AGE_C3[which(a$DON_AGE>=65)] = '>=65'
+a$DON_AGE_C3=factor(a$DON_AGE_C3,levels = c(
+  '0-17', '28-29', '30-41','42-54','55-64','>=65'
+)) 
+
+# donor age cat 4
+# follow:
+# https://onlinelibrary.wiley.com/doi/10.1111/j.1432-2277.2012.01539.x
+a$DON_AGE_C4 = 0
+a$DON_AGE_C4[which(a$DON_AGE>=0&a$DON_AGE<=39)] = '0-39'
+a$DON_AGE_C4[which(a$DON_AGE>=40&a$DON_AGE<=59)] = '40-59'
+a$DON_AGE_C4[which(a$DON_AGE>=60)] = '>=60'
+a$DON_AGE_C4=factor(a$DON_AGE_C4,levels = c(
+  '0-39', '40-59', '>=60'
+)) 
+
+```
+
+# basic model:
+```{r}
+multi.vglm<-vglm(as.factor(event) ~ factor(center) + REC_RACE
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C1
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C1
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=a, family = multinomial(refLevel = 1))
+summary(multi.vglm)
+```
