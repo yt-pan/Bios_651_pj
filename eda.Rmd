@@ -18,6 +18,12 @@ a <- read_csv("pseudo_kidney_transplant_2005.csv")
 a = na.omit(a)
 ```
 
+## correlation
+```{r}
+library(GGally)
+ggpairs(a, title="correlogram with ggpairs()") 
+```
+
 ## relabel categorical variables
 ```{r}
 # "DON_HIST_DIAB"       Y=1 N=0
@@ -51,14 +57,14 @@ a$DON_BMI_C[which(a$DON_BMI>=18.5 & a$DON_BMI<25)] = 'Healthy'
 a$DON_BMI_C[which(a$DON_BMI>=25 & a$DON_BMI<30)] = 'Overweight'
 a$DON_BMI_C[which(a$DON_BMI>=30)] = 'Obesity'
 a$DON_BMI_C=factor(a$DON_BMI_C,levels=c("Underweight","Healthy",
-                                        "Overweight","Obesity"))
+                                        "Overweight","Obesity"),ordered=TRUE)
 a$REC_BMI_C = 0
 a$REC_BMI_C[which(a$REC_BMI<18.5)] = 'Underweight'
 a$REC_BMI_C[which(a$REC_BMI>=18.5 & a$REC_BMI<25)] = 'Healthy'
 a$REC_BMI_C[which(a$REC_BMI>=25 & a$REC_BMI<30)] = 'Overweight'
 a$REC_BMI_C[which(a$REC_BMI>=30)] = 'Obesity'
 a$REC_BMI_C=factor(a$REC_BMI_C,levels=c("Underweight","Healthy",
-                                        "Overweight","Obesity"))
+                                        "Overweight","Obesity"),ordered=TRUE)
 # relevel Age
 # level using :
 # Analysis of OPO Transplant Rates for Potential Donors Stratified by Race and Ethnicity
@@ -81,7 +87,7 @@ a$DON_AGE_C1[which(a$DON_AGE>=70)] = '>=70'
 a$DON_AGE_C1=factor(a$DON_AGE_C1,levels = c(
   '<1',  '1-5', '6-11','12-17','18-24','25-29','30-34','35-39',
   '40-44','45-49','50-54','55-59','60-64','65-69','>=70'
-)) 
+),ordered=TRUE) 
 a$REC_AGE_C1 = 0
 a$REC_AGE_C1[which(a$REC_AGE_AT_TX<1)] = '<1'
 a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=1&a$REC_AGE_AT_TX<=5)] = '1-5'
@@ -101,7 +107,7 @@ a$REC_AGE_C1[which(a$REC_AGE_AT_TX>=70)] = '>=70'
 a$REC_AGE_C1=factor(a$REC_AGE_C1,levels = c(
   '<1',  '1-5', '6-11','12-17','18-24','25-29','30-34','35-39',
   '40-44','45-49','50-54','55-59','60-64','65-69','>=70'
-)) 
+),ordered=TRUE) 
 
 # relevel age 2
 # https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/1722507#ioi130062f2
@@ -117,7 +123,7 @@ a$DON_AGE_C2[which(a$DON_AGE>=56&a$DON_AGE<=70)] = '56-70'
 a$DON_AGE_C2[which(a$DON_AGE>=70)] = '>=70'
 a$DON_AGE_C2=factor(a$DON_AGE_C2,levels = c(
   '0-14', '15-18', '19-25','26-40','41-55','56-70','>=70'
-)) 
+),ordered=TRUE) 
 a$REC_AGE_C2 = 0
 a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=0&a$REC_AGE_AT_TX<=14)] = '0-14'
 a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=15&a$REC_AGE_AT_TX<=18)] = '15-18'
@@ -128,7 +134,7 @@ a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=56&a$REC_AGE_AT_TX<=70)] = '56-70'
 a$REC_AGE_C2[which(a$REC_AGE_AT_TX>=70)] = '>=70'
 a$REC_AGE_C2=factor(a$REC_AGE_C2,levels = c(
   '0-14', '15-18', '19-25','26-40','41-55','56-70','>=70'
-)) 
+),ordered=TRUE) 
 
 # donor age cat 3 
 # follow:
@@ -142,7 +148,7 @@ a$DON_AGE_C3[which(a$DON_AGE>=55&a$DON_AGE<=64)] = '55-64'
 a$DON_AGE_C3[which(a$DON_AGE>=65)] = '>=65'
 a$DON_AGE_C3=factor(a$DON_AGE_C3,levels = c(
   '0-17', '28-29', '30-41','42-54','55-64','>=65'
-)) 
+),ordered=TRUE) 
 
 # donor age cat 4
 # follow:
@@ -153,46 +159,39 @@ a$DON_AGE_C4[which(a$DON_AGE>=40&a$DON_AGE<=59)] = '40-59'
 a$DON_AGE_C4[which(a$DON_AGE>=60)] = '>=60'
 a$DON_AGE_C4=factor(a$DON_AGE_C4,levels = c(
   '0-39', '40-59', '>=60'
-)) 
-a$REC_AGE_C4 = 0
-a$REC_AGE_C4[which(a$REC_AGE_AT_TX>=0&a$REC_AGE_AT_TX<=39)] = '0-39'
-a$REC_AGE_C4[which(a$REC_AGE_AT_TX>=40&a$REC_AGE_AT_TX<=59)] = '40-59'
-a$REC_AGE_C4[which(a$REC_AGE_AT_TX>=60)] = '>=60'
-a$REC_AGE_C4=factor(a$REC_AGE_C4,levels = c(
-  '0-39', '40-59', '>=60'
-)) 
+),ordered=TRUE) 
 
 ```
-
-# basic model:
-```{r}
-multi.vglm<-vglm(as.factor(event) ~ factor(center) + REC_RACE
-                 +DON_HIST_DIAB
-                 +DON_GENDER
-                 +DON_BMI_C
-                 +DON_AGE_C4
-                 +DON_RACE
-                 +DON_HTN
-                 +REC_GENDER
-                 +REC_BMI_C
-                 +REC_COLD_ISCH_TM_20
-                 +REC_AGE_C1
-                 +REC_DIAB
-                 +REC_DIAL_YRS,
-                 data=a, family = multinomial(refLevel = 1))
-summary(multi.vglm)
-```
-# seprate the rec_race
 
 ```{r}
-data_black=a[which(a$REC_RACE==1),]
-data_nonblack=a[which(a$REC_RACE==0),]
-save(data_black,file='./data_black.RData')
-save(data_nonblack,file='./data_nonblack.RData')
-```
+b=a[,c("event",
+       "REC_RACE",
+       "DON_HIST_DIAB",
+       "DON_GENDER",
+       "DON_BMI_C",
+       "DON_AGE_C4",
+       "DON_RACE",
+       "DON_HTN",
+       "REC_GENDER",
+       "REC_BMI_C",
+       "REC_COLD_ISCH_TM_20",
+       "REC_AGE_C1",
+       "REC_DIAB",
+       "REC_DIAL_YRS")]
+c = as.data.frame(matrix(nrow=nrow(b),ncol=1))
+k=0
+for (i in c(5,6,10,12)){
+  c = b[,i]
+  b[,i] = as.integer(unlist(c))
+}
+apply(b, 2, unlist)
 
+```
 
 ```{r}
-load(file='./data_black.RData')
-load(file='./data_nonblack.RData')
+library(GGally)
+ggpairs(b, title="correlogram with ggpairs()") 
 ```
+
+
+
