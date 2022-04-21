@@ -8,6 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 if (!require("pacman")) install.packages("pacman")
+if (!require("glmtoolbox")) install.packages("glmtoolbox")
+library(glmtoolbox)
 pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
 library(readr)
 a <- read_csv("pseudo_kidney_transplant_2005.csv")
@@ -166,7 +168,7 @@ a$REC_AGE_C4=factor(a$REC_AGE_C4,levels = c(
 
 # basic model:
 ```{r}
-multi.vglm<-vglm(as.factor(event) ~ factor(center) + REC_RACE
+multi.vglm<-vglm(as.factor(event) ~ factor(center)
                  +DON_HIST_DIAB
                  +DON_GENDER
                  +DON_BMI_C
@@ -176,7 +178,7 @@ multi.vglm<-vglm(as.factor(event) ~ factor(center) + REC_RACE
                  +REC_GENDER
                  +REC_BMI_C
                  +REC_COLD_ISCH_TM_20
-                 +REC_AGE_C1
+                 +REC_AGE_C4
                  +REC_DIAB
                  +REC_DIAL_YRS,
                  data=a, family = multinomial(refLevel = 1))

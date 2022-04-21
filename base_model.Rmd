@@ -1,0 +1,58 @@
+---
+title: "Base_model"
+author: "Yutong Pan"
+date: "2022/4/20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("pacman")) install.packages("pacman")
+if (!require("glmtoolbox")) install.packages("glmtoolbox")
+library(glmtoolbox)
+pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
+library(readr)
+```
+
+```{r}
+load(file='./data_black.RData')
+load(file='./data_nonblack.RData')
+```
+
+
+```{r}
+black.multi.vglm<-vglm(as.factor(event) ~ factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_black, family = multinomial(refLevel = 1))
+summary(black.multi.vglm)
+```
+
+```{r}
+nonblack.multi.vglm<-vglm(as.factor(event) ~ factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_nonblack, family = multinomial(refLevel = 1))
+summary(nonblack.multi.vglm)
+```
+
