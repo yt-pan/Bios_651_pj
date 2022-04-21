@@ -1,0 +1,216 @@
+---
+title: "Caterpillar Plot"
+author: "Longfei Zhang"
+date: "4/20/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("pacman")) install.packages("pacman")
+if (!require("glmtoolbox")) install.packages("glmtoolbox")
+library(glmtoolbox)
+pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
+library(readr)
+```
+
+
+```{r}
+load(file='./data_black.RData')
+load(file='./data_nonblack.RData')
+```
+
+
+```{r}
+mod_blc<-vglm(as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_black, family = multinomial(refLevel = 1))
+
+gamma_death_blc <- coef(mod_blc)[2*(1:19)-1]
+which(gamma_death_blc==median(gamma_death_blc))
+gamma_fail_blc <- coef(mod_blc)[2*(1:19)]
+which(gamma_fail_blc==median(gamma_fail_blc))
+```
+
+```{r}
+mod_nonblc<-vglm(as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_nonblack, family = multinomial(refLevel = 1))
+gamma_death_nonblc <- coef(mod_nonblc)[2*(1:19)-1]
+which(gamma_death_nonblc==median(gamma_death_nonblc))
+gamma_fail_nonblc <- coef(mod_nonblc)[2*(1:19)]
+which(gamma_fail_nonblc==median(gamma_fail_nonblc))
+```
+
+
+
+```{r Standard Death Ratio (Black)}
+dat_death_blc <- data_black %>% filter(event!=3) %>% mutate(center=17)
+pred_tmp <- predictvglm(object = mod_blc, newdata = dat_death_blc, type = 'link', se.fit = T) 
+pred_death_blc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,2]/mu[,1])'])
+pred_death_blc <- pred_death_blc %>%
+          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
+          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(center = data_black$center[data_black$event!=3]) %>%
+          mutate(event = data_black$event[data_black$event!=3]) %>%
+          group_by(center) %>%
+          mutate(se = sqrt(sum(se^2))) %>%
+          mutate(pred = sum(pred)) %>%
+          mutate(obs = sum(event==2)) %>%
+          select(center, obs, pred, se) %>%
+          unique() %>%
+          ungroup(center) %>%
+          mutate(uci = obs/(pred+1.96*se)) %>%
+          mutate(lci = obs/(pred-1.96*se)) %>%
+          mutate(sdr = obs/pred) 
+          
+
+plot_death_blc <- pred_death_blc %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(sdr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=sdr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=1, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(0, 20)) +
+  annotate("text", x=10, y="center 2", label="Reference=1", size=5) +
+  labs(x="Standard Death Ratio (Black)", y="Center")
+plot_death_blc
+```
+
+
+```{r Standard Graft Failure Ratio (Black)}
+dat_fail_blc <- data_black %>% filter(event!=2) %>% mutate(center=19)
+pred_tmp <- predictvglm(object = mod_blc, newdata = dat_fail_blc, type = 'link', se.fit = T) 
+pred_fail_blc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,3]/mu[,1])'])
+pred_fail_blc <- pred_fail_blc %>%
+          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
+          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(center = data_black$center[data_black$event!=2]) %>%
+          mutate(event = data_black$event[data_black$event!=2]) %>%
+          group_by(center) %>%
+          mutate(se = sqrt(sum(se^2))) %>%
+          mutate(pred = sum(pred)) %>%
+          mutate(obs = sum(event==3)) %>%
+          select(center, obs, pred, se) %>%
+          unique() %>%
+          ungroup(center) %>%
+          mutate(uci = obs/(pred+1.96*se)) %>%
+          mutate(lci = obs/(pred-1.96*se)) %>%
+          mutate(sfr = obs/pred) 
+          
+
+plot_fail_blc <- pred_fail_blc %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(sfr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=sfr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=1, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(0, 3)) +
+  annotate("text", x=2, y="center 4", label="Reference=1", size=5) +
+  labs(x="Standard Graft Failure Ratio (Black)", y="Center")
+plot_fail_blc
+```
+
+
+
+```{r Standard Death Ratio (nonBlack)}
+dat_death_nonblc <- data_nonblack %>% filter(event!=3) %>% mutate(center=12)
+pred_tmp <- predictvglm(object = mod_nonblc, newdata = dat_death_nonblc, type = 'link', se.fit = T) 
+pred_death_nonblc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,2]/mu[,1])'])
+pred_death_nonblc <- pred_death_nonblc %>%
+          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
+          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(center = data_nonblack$center[data_nonblack$event!=3]) %>%
+          mutate(event = data_nonblack$event[data_nonblack$event!=3]) %>%
+          group_by(center) %>%
+          mutate(se = sqrt(sum(se^2))) %>%
+          mutate(pred = sum(pred)) %>%
+          mutate(obs = sum(event==2)) %>%
+          select(center, obs, pred, se) %>%
+          unique() %>%
+          ungroup(center) %>%
+          mutate(uci = obs/(pred+1.96*se)) %>%
+          mutate(lci = obs/(pred-1.96*se)) %>%
+          mutate(sdr = obs/pred) 
+          
+
+plot_death_nonblc <- pred_death_nonblc %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(sdr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=sdr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=1, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(0, 2.5)) +
+  annotate("text", x=2, y="center 11", label="Reference=1", size=5) +
+  labs(x="Standard Death Ratio (nonBlack)", y="Center")
+plot_death_nonblc
+```
+
+
+
+
+
+```{r Standard Graft Failure Ratio (nonBlack)}
+dat_fail_nonblc <- data_nonblack %>% filter(event!=2) %>% mutate(center=5)
+pred_tmp <- predictvglm(object = mod_nonblc, newdata = dat_fail_nonblc, type = 'link', se.fit = T) 
+pred_fail_nonblc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,3]/mu[,1])'])
+pred_fail_nonblc <- pred_fail_nonblc %>%
+          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
+          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(center = data_nonblack$center[data_nonblack$event!=2]) %>%
+          mutate(event = data_nonblack$event[data_nonblack$event!=2]) %>%
+          group_by(center) %>%
+          mutate(se = sqrt(sum(se^2))) %>%
+          mutate(pred = sum(pred)) %>%
+          mutate(obs = sum(event==3)) %>%
+          select(center, obs, pred, se) %>%
+          unique() %>%
+          ungroup(center) %>%
+          mutate(uci = obs/(pred+1.96*se)) %>%
+          mutate(lci = obs/(pred-1.96*se)) %>%
+          mutate(sfr = obs/pred) 
+          
+
+plot_fail_nonblc <- pred_fail_nonblc %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(sfr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=sfr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=1, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(0, 3)) +
+  annotate("text", x=2, y="center 11", label="Reference=1", size=5) +
+  labs(x="Standard Graft Failure Ratio (nonBlack)", y="Center")
+plot_fail_nonblc
+```
+
+
