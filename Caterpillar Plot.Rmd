@@ -96,7 +96,7 @@ plot_death_blc <- pred_death_blc %>%
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
   scale_x_continuous(limits=c(0, 20)) +
-  annotate("text", x=10, y="center 2", label="Reference=1", size=5) +
+  annotate("text", x=10, y="center 19", label="Reference=1", size=5) +
   labs(x="Standard Death Ratio (Black)", y="Center")
 plot_death_blc
 ```
@@ -212,5 +212,28 @@ plot_fail_nonblc <- pred_fail_nonblc %>%
   labs(x="Standard Graft Failure Ratio (nonBlack)", y="Center")
 plot_fail_nonblc
 ```
+
+```{r}
+library(nnet)
+library(glm.predict)
+mod_blc_nnet<-multinom(as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_black, family = multinomial(refLevel = 1))
+glm.predict::multinom.predict(mod_blc_nnet, dat_death_blc, sim.count=1000, conf.int=0.95, sigma=NULL, set.seed=NULL)
+
+```
+
+
 
 
