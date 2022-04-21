@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 if (!require("pacman")) install.packages("pacman")
 if (!require("glmtoolbox")) install.packages("glmtoolbox")
 library(glmtoolbox)
-pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
+pacman::p_load(knitr, gmodels, car, lmtest, VGAM, dplyr, ggpubr)
 library(readr)
 ```
 
@@ -82,9 +82,10 @@ pred_death_blc <- pred_death_blc %>%
           select(center, obs, pred, se) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(uci = obs/(pred+1.96*se)) %>%
-          mutate(lci = obs/(pred-1.96*se)) %>%
-          mutate(sdr = obs/pred) 
+          mutate(se = obs/pred^2*se) %>%
+          mutate(sdr = obs/pred) %>%
+          mutate(uci = sdr + 1.96*se) %>%
+          mutate(lci = sdr - 1.96*se)
           
 
 plot_death_blc <- pred_death_blc %>% 
@@ -95,8 +96,8 @@ plot_death_blc <- pred_death_blc %>%
   geom_vline(xintercept=1, linetype="dashed", size=0.5) +
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
-  scale_x_continuous(limits=c(0, 20)) +
-  annotate("text", x=10, y="center 19", label="Reference=1", size=5) +
+  scale_x_continuous(limits=c(0, 12.5)) +
+  annotate("text", x=7.5, y="center 19", label="Reference=1", size=5) +
   labs(x="Standard Death Ratio (Black)", y="Center")
 plot_death_blc
 ```
@@ -118,9 +119,10 @@ pred_fail_blc <- pred_fail_blc %>%
           select(center, obs, pred, se) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(uci = obs/(pred+1.96*se)) %>%
-          mutate(lci = obs/(pred-1.96*se)) %>%
-          mutate(sfr = obs/pred) 
+          mutate(se = obs/pred^2*se) %>%
+          mutate(sfr = obs/pred) %>%
+          mutate(uci = sfr + 1.96*se) %>%
+          mutate(lci = sfr - 1.96*se) 
           
 
 plot_fail_blc <- pred_fail_blc %>% 
@@ -132,7 +134,7 @@ plot_fail_blc <- pred_fail_blc %>%
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
   scale_x_continuous(limits=c(0, 3)) +
-  annotate("text", x=2, y="center 4", label="Reference=1", size=5) +
+  annotate("text", x=2, y="center 17", label="Reference=1", size=5) +
   labs(x="Standard Graft Failure Ratio (Black)", y="Center")
 plot_fail_blc
 ```
@@ -155,9 +157,10 @@ pred_death_nonblc <- pred_death_nonblc %>%
           select(center, obs, pred, se) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(uci = obs/(pred+1.96*se)) %>%
-          mutate(lci = obs/(pred-1.96*se)) %>%
-          mutate(sdr = obs/pred) 
+          mutate(se = obs/pred^2*se) %>%
+          mutate(sdr = obs/pred) %>%
+          mutate(uci = sdr + 1.96*se) %>%
+          mutate(lci = sdr - 1.96*se) 
           
 
 plot_death_nonblc <- pred_death_nonblc %>% 
@@ -194,9 +197,10 @@ pred_fail_nonblc <- pred_fail_nonblc %>%
           select(center, obs, pred, se) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(uci = obs/(pred+1.96*se)) %>%
-          mutate(lci = obs/(pred-1.96*se)) %>%
-          mutate(sfr = obs/pred) 
+          mutate(se = obs/pred^2*se) %>%
+          mutate(sfr = obs/pred) %>%
+          mutate(uci = sfr + 1.96*se) %>%
+          mutate(lci = sfr - 1.96*se) 
           
 
 plot_fail_nonblc <- pred_fail_nonblc %>% 
@@ -207,7 +211,7 @@ plot_fail_nonblc <- pred_fail_nonblc %>%
   geom_vline(xintercept=1, linetype="dashed", size=0.5) +
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
-  scale_x_continuous(limits=c(0, 3)) +
+  scale_x_continuous(limits=c(0, 3.2)) +
   annotate("text", x=2, y="center 11", label="Reference=1", size=5) +
   labs(x="Standard Graft Failure Ratio (nonBlack)", y="Center")
 plot_fail_nonblc
