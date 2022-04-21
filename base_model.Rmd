@@ -21,7 +21,7 @@ load(file='./data_nonblack.RData')
 
 
 ```{r}
-black.multi.vglm<-vglm(as.factor(event) ~ factor(center)
+black.multi.vglm<-vglm(as.factor(event) ~ 0+factor(center)
                  +DON_HIST_DIAB
                  +DON_GENDER
                  +DON_BMI_C
@@ -39,7 +39,7 @@ summary(black.multi.vglm)
 ```
 
 ```{r}
-nonblack.multi.vglm<-vglm(as.factor(event) ~ factor(center)
+nonblack.multi.vglm<-vglm(as.factor(event) ~ 0+factor(center)
                  +DON_HIST_DIAB
                  +DON_GENDER
                  +DON_BMI_C
@@ -56,3 +56,7 @@ nonblack.multi.vglm<-vglm(as.factor(event) ~ factor(center)
 summary(nonblack.multi.vglm)
 ```
 
+```{r}
+vcovvlm(nonblack.multi.vglm)
+
+```
