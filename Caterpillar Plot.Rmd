@@ -39,8 +39,11 @@ mod_blc<-vglm(as.factor(event) ~ 0+factor(center)
 
 gamma_death_blc <- coef(mod_blc)[2*(1:19)-1]
 which(gamma_death_blc==median(gamma_death_blc))
+vgamma_death_blc <- diag(vcovvlm(mod_blc))[2*(1:19)-1]
+
 gamma_fail_blc <- coef(mod_blc)[2*(1:19)]
 which(gamma_fail_blc==median(gamma_fail_blc))
+vgamma_fail_blc <- diag(vcovvlm(mod_blc))[2*(1:19)]
 ```
 
 ```{r}
@@ -60,8 +63,11 @@ mod_nonblc<-vglm(as.factor(event) ~ 0+factor(center)
                  data=data_nonblack, family = multinomial(refLevel = 1))
 gamma_death_nonblc <- coef(mod_nonblc)[2*(1:19)-1]
 which(gamma_death_nonblc==median(gamma_death_nonblc))
+vgamma_death_nonblc <- diag(vcovvlm(mod_nonblc))[2*(1:19)-1]
+
 gamma_fail_nonblc <- coef(mod_nonblc)[2*(1:19)]
 which(gamma_fail_nonblc==median(gamma_fail_nonblc))
+vgamma_fail_nonblc <- diag(vcovvlm(mod_nonblc))[2*(1:19)]
 ```
 
 
@@ -69,23 +75,27 @@ which(gamma_fail_nonblc==median(gamma_fail_nonblc))
 ```{r Standard Death Ratio (Black)}
 dat_death_blc <- data_black %>% filter(event!=3) %>% mutate(center=17)
 pred_tmp <- predictvglm(object = mod_blc, newdata = dat_death_blc, type = 'link', se.fit = T) 
-pred_death_blc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,2]/mu[,1])'])
+pred_death_blc <- data.frame(eta = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'])
 pred_death_blc <- pred_death_blc %>%
-          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
-          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(pi = logitlink(eta, inverse = T)) %>%
           mutate(center = data_black$center[data_black$event!=3]) %>%
           mutate(event = data_black$event[data_black$event!=3]) %>%
           group_by(center) %>%
-          mutate(se = sqrt(sum(se^2))) %>%
-          mutate(pred = sum(pred)) %>%
+          mutate(pred = sum(pi)) %>%
           mutate(obs = sum(event==2)) %>%
-          select(center, obs, pred, se) %>%
+          mutate(n = n())%>%
+          mutate(gprime2 = sum(exp(2*eta)/(1+exp(eta))^4)) %>%
+          select(center, obs, pred, n, gprime2) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(se = obs/pred^2*se) %>%
+          mutate(se = sqrt(gprime2*vgamma_death_blc)/pred) %>%
+          mutate(se = se*as.integer(se<10)) %>%
           mutate(sdr = obs/pred) %>%
           mutate(uci = sdr + 1.96*se) %>%
-          mutate(lci = sdr - 1.96*se)
+          mutate(lci = sdr - 1.96*se) 
+
+pred_death_blc$lci[pred_death_blc$lci<0] <- 0
+pred_death_blc$uci[pred_death_blc$uci>100] <- 0
 pred_death_blc
 ```          
 
@@ -99,8 +109,8 @@ plot_death_blc <- pred_death_blc %>%
   geom_vline(xintercept=1, linetype="dashed", size=0.5) +
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
-  scale_x_continuous(limits=c(0, 12.5)) +
-  annotate("text", x=7.5, y="center 19", label="Reference=1", size=5) +
+  scale_x_continuous(limits=c(0, 10)) +
+  annotate("text", x=4, y="center 19", label="Reference=1", size=5) +
   labs(x="Standard Death Ratio (Black)", y="Center")
 plot_death_blc
 ```
@@ -109,23 +119,25 @@ plot_death_blc
 ```{r Standard Graft Failure Ratio (Black)}
 dat_fail_blc <- data_black %>% filter(event!=2) %>% mutate(center=19)
 pred_tmp <- predictvglm(object = mod_blc, newdata = dat_fail_blc, type = 'link', se.fit = T) 
-pred_fail_blc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,3]/mu[,1])'])
+pred_fail_blc <- data.frame(eta = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'])
 pred_fail_blc <- pred_fail_blc %>%
-          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
-          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(pi = logitlink(eta, inverse = T)) %>%
           mutate(center = data_black$center[data_black$event!=2]) %>%
           mutate(event = data_black$event[data_black$event!=2]) %>%
           group_by(center) %>%
-          mutate(se = sqrt(sum(se^2))) %>%
-          mutate(pred = sum(pred)) %>%
+          mutate(pred = sum(pi)) %>%
           mutate(obs = sum(event==3)) %>%
-          select(center, obs, pred, se) %>%
+          mutate(n = n())%>%
+          mutate(gprime2 = sum(exp(2*eta)/(1+exp(eta))^4)) %>%
+          select(center, obs, pred, n, gprime2) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(se = obs/pred^2*se) %>%
+          mutate(se = sqrt(gprime2*vgamma_fail_blc)/pred) %>%
           mutate(sfr = obs/pred) %>%
           mutate(uci = sfr + 1.96*se) %>%
           mutate(lci = sfr - 1.96*se) 
+
+pred_fail_blc$lci[pred_fail_blc$lci<0] <- 0
 pred_fail_blc
 ```
 
@@ -150,23 +162,25 @@ plot_fail_blc
 ```{r Standard Death Ratio (nonBlack)}
 dat_death_nonblc <- data_nonblack %>% filter(event!=3) %>% mutate(center=12)
 pred_tmp <- predictvglm(object = mod_nonblc, newdata = dat_death_nonblc, type = 'link', se.fit = T) 
-pred_death_nonblc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,2]/mu[,1])'])
+pred_death_nonblc <- data.frame(eta = pred_tmp$fitted.values[,'log(mu[,2]/mu[,1])'])
 pred_death_nonblc <- pred_death_nonblc %>%
-          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
-          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(pi = logitlink(eta, inverse = T)) %>%
           mutate(center = data_nonblack$center[data_nonblack$event!=3]) %>%
           mutate(event = data_nonblack$event[data_nonblack$event!=3]) %>%
           group_by(center) %>%
-          mutate(se = sqrt(sum(se^2))) %>%
-          mutate(pred = sum(pred)) %>%
+          mutate(pred = sum(pi)) %>%
           mutate(obs = sum(event==2)) %>%
-          select(center, obs, pred, se) %>%
+          mutate(n = n())%>%
+          mutate(gprime2 = sum(exp(2*eta)/(1+exp(eta))^4)) %>%
+          select(center, obs, pred, n, gprime2) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(se = obs/pred^2*se) %>%
+          mutate(se = sqrt(gprime2*vgamma_death_nonblc)/pred) %>%
           mutate(sdr = obs/pred) %>%
           mutate(uci = sdr + 1.96*se) %>%
           mutate(lci = sdr - 1.96*se) 
+
+pred_death_nonblc$lci[pred_death_nonblc$lci<0] <- 0
 pred_death_nonblc
 ```
 
@@ -193,24 +207,26 @@ plot_death_nonblc
 ```{r Standard Graft Failure Ratio (nonBlack)}
 dat_fail_nonblc <- data_nonblack %>% filter(event!=2) %>% mutate(center=5)
 pred_tmp <- predictvglm(object = mod_nonblc, newdata = dat_fail_nonblc, type = 'link', se.fit = T) 
-pred_fail_nonblc <- data.frame(pred = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'], se = pred_tmp$se.fit[,'log(mu[,3]/mu[,1])'])
+pred_fail_nonblc <- data.frame(eta = pred_tmp$fitted.values[,'log(mu[,3]/mu[,1])'])
 pred_fail_nonblc <- pred_fail_nonblc %>%
-          mutate(se = exp(pred)/(exp(pred)+1)^2*se) %>%
-          mutate(pred = logitlink(pred, inverse = T)) %>%
+          mutate(pi = logitlink(eta, inverse = T)) %>%
           mutate(center = data_nonblack$center[data_nonblack$event!=2]) %>%
           mutate(event = data_nonblack$event[data_nonblack$event!=2]) %>%
           group_by(center) %>%
-          mutate(se = sqrt(sum(se^2))) %>%
-          mutate(pred = sum(pred)) %>%
+          mutate(pred = sum(pi)) %>%
           mutate(obs = sum(event==3)) %>%
-          select(center, obs, pred, se) %>%
+          mutate(n = n())%>%
+          mutate(gprime2 = sum(exp(2*eta)/(1+exp(eta))^4)) %>%
+          select(center, obs, pred, n, gprime2) %>%
           unique() %>%
           ungroup(center) %>%
-          mutate(se = obs/pred^2*se) %>%
+          mutate(se = sqrt(gprime2*vgamma_fail_nonblc)/pred) %>%
           mutate(sfr = obs/pred) %>%
           mutate(uci = sfr + 1.96*se) %>%
-          mutate(lci = sfr - 1.96*se) 
- pred_fail_nonblc
+          mutate(lci = sfr - 1.96*se)
+
+pred_fail_nonblc$lci[pred_fail_nonblc$lci<0] <- 0
+pred_fail_nonblc
 ```
  
  
@@ -245,7 +261,7 @@ plot_dsdr <- sdr_diff %>%
   geom_vline(xintercept=0, linetype="dashed", size=0.5) +
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
-  scale_x_continuous(limits=c(-3, 12)) +
+  scale_x_continuous(limits=c(-3, 8)) +
   annotate("text", x=3, y="center 3", label="Reference=0", size=5) +
   labs(x="Difference of Standard Death Ratio", y="Center")
 plot_dsdr
@@ -266,34 +282,14 @@ plot_dsfr <- sfr_diff %>%
   geom_vline(xintercept=0, linetype="dashed", size=0.5) +
   geom_errorbarh(height=0.15, size=.5) + 
   geom_point(size=1.5) +
-  scale_x_continuous(limits=c(-2, 2.5)) +
-  annotate("text", x=1, y="center 4", label="Reference=0", size=5) +
+  scale_x_continuous(limits=c(-2.5, 2.5)) +
+  annotate("text", x=1.5, y="center 4", label="Reference=0", size=5) +
   labs(x="Difference of Standard Graft Failure Ratio", y="Center")
 plot_dsfr
 ```
 
 
 
-```{r}
-library(nnet)
-library(glm.predict)
-mod_blc_nnet<-multinom(as.factor(event) ~ 0+factor(center)
-                 +DON_HIST_DIAB
-                 +DON_GENDER
-                 +DON_BMI_C
-                 +DON_AGE_C4
-                 +DON_RACE
-                 +DON_HTN
-                 +REC_GENDER
-                 +REC_BMI_C
-                 +REC_COLD_ISCH_TM_20
-                 +REC_AGE_C4
-                 +REC_DIAB
-                 +REC_DIAL_YRS,
-                 data=data_black, family = multinomial(refLevel = 1))
-glm.predict::multinom.predict(mod_blc_nnet, dat_death_blc, sim.count=1000, conf.int=0.95, sigma=NULL, set.seed=NULL)
-
-```
 
 
 
