@@ -86,8 +86,11 @@ pred_death_blc <- pred_death_blc %>%
           mutate(sdr = obs/pred) %>%
           mutate(uci = sdr + 1.96*se) %>%
           mutate(lci = sdr - 1.96*se)
-          
+pred_death_blc
+```          
 
+
+```{r plot sdr(Black)}
 plot_death_blc <- pred_death_blc %>% 
   mutate(center = paste("center",1:19)) %>%
   arrange(sdr) %>%
@@ -123,8 +126,11 @@ pred_fail_blc <- pred_fail_blc %>%
           mutate(sfr = obs/pred) %>%
           mutate(uci = sfr + 1.96*se) %>%
           mutate(lci = sfr - 1.96*se) 
-          
+pred_fail_blc
+```
 
+
+```{r plot sfr Black}
 plot_fail_blc <- pred_fail_blc %>% 
   mutate(center = paste("center",1:19)) %>%
   arrange(sfr) %>%
@@ -161,8 +167,11 @@ pred_death_nonblc <- pred_death_nonblc %>%
           mutate(sdr = obs/pred) %>%
           mutate(uci = sdr + 1.96*se) %>%
           mutate(lci = sdr - 1.96*se) 
-          
+pred_death_nonblc
+```
 
+
+```{r plot sdr nonblack}
 plot_death_nonblc <- pred_death_nonblc %>% 
   mutate(center = paste("center",1:19)) %>%
   arrange(sdr) %>%
@@ -201,8 +210,11 @@ pred_fail_nonblc <- pred_fail_nonblc %>%
           mutate(sfr = obs/pred) %>%
           mutate(uci = sfr + 1.96*se) %>%
           mutate(lci = sfr - 1.96*se) 
-          
-
+ pred_fail_nonblc
+```
+ 
+ 
+```{r plot sfr nonblack}
 plot_fail_nonblc <- pred_fail_nonblc %>% 
   mutate(center = paste("center",1:19)) %>%
   arrange(sfr) %>%
@@ -216,6 +228,51 @@ plot_fail_nonblc <- pred_fail_nonblc %>%
   labs(x="Standard Graft Failure Ratio (nonBlack)", y="Center")
 plot_fail_nonblc
 ```
+
+
+```{r race disparity death}
+sdr_diff <- data.frame(center = pred_death_blc$center, 
+                         dsdr = pred_death_blc$sdr- pred_death_nonblc$sdr,
+                         se = sqrt(pred_death_blc$se^2 + pred_death_nonblc$se^2))
+sdr_diff$lci <- sdr_diff$dsdr - 1.96*sdr_diff$se
+sdr_diff$uci <- sdr_diff$dsdr + 1.96*sdr_diff$se
+
+plot_dsdr <- sdr_diff %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(dsdr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=dsdr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=0, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(-3, 12)) +
+  annotate("text", x=3, y="center 3", label="Reference=0", size=5) +
+  labs(x="Difference of Standard Death Ratio", y="Center")
+plot_dsdr
+```
+
+```{r race disparity of graft failure}
+sfr_diff <- data.frame(center = pred_fail_blc$center, 
+                         dsfr = pred_fail_blc$sfr- pred_fail_nonblc$sfr,
+                         se = sqrt(pred_fail_blc$se^2 + pred_fail_nonblc$se^2))
+sfr_diff$lci <- sfr_diff$dsfr - 1.96*sfr_diff$se
+sfr_diff$uci <- sfr_diff$dsfr + 1.96*sfr_diff$se
+
+plot_dsfr <- sfr_diff %>% 
+  mutate(center = paste("center",1:19)) %>%
+  arrange(dsfr) %>%
+  mutate(center=factor(center, levels=center)) %>%
+  ggplot(aes(y=center, x=dsfr, xmin=lci, xmax=uci)) +
+  geom_vline(xintercept=0, linetype="dashed", size=0.5) +
+  geom_errorbarh(height=0.15, size=.5) + 
+  geom_point(size=1.5) +
+  scale_x_continuous(limits=c(-2, 2.5)) +
+  annotate("text", x=1, y="center 4", label="Reference=0", size=5) +
+  labs(x="Difference of Standard Graft Failure Ratio", y="Center")
+plot_dsfr
+```
+
+
 
 ```{r}
 library(nnet)
