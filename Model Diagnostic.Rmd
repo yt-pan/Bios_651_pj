@@ -1,0 +1,144 @@
+---
+title: "Model Diagnosis "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+load("/Users/wang/Downloads/data_black.RData")
+load("/Users/wang/Downloads/data_nonblack.RData")
+
+data_black$event<-as.numeric(data_black$event)
+data_nonblack$event<- as.numeric(data_nonblack$event)
+
+#linear regression for black 
+black.Reg <- lm(event~ factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data = data_black)
+summary(black.Reg)
+```
+
+```{r}
+#linear regression for nonblack
+nonblack.Reg <- lm(event~ factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data = data_nonblack)
+summary(nonblack.Reg)
+```
+
+```{r}
+#VIF
+vif(black.Reg)
+vif(nonblack.Reg)
+```
+
+
+```{r}
+#Hosmer-Lemeshow Test
+knitr::opts_chunk$set(echo = TRUE)
+if (!require("pacman")) install.packages("pacman")
+if (!require("glmtoolbox")) install.packages("glmtoolbox")
+library(glmtoolbox)
+pacman::p_load(knitr, gmodels, car, lmtest, VGAM)
+library(readr)
+library(nnet)
+black.multi.vglm<-vglm(as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_black, family = multinomial(refLevel = 1))
+summary(black.multi.vglm)
+logitgof(data_black$event, fitted(black.multi.vglm))
+```
+
+```{r}
+nonblack.multi.vglm<-vglm(as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_nonblack, family = multinomial(refLevel = 1))
+summary(nonblack.multi.vglm)
+logitgof(data_nonblack$event, fitted(nonblack.multi.vglm))
+```
+
+```{r}
+#PseudoR2
+m1 <- multinom(formula = as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_black, model=T )
+PseudoR2(m1, which = c("CoxSnell","Nagelkerke","McFadden"))
+```
+
+```{r}
+m2 <- multinom(formula = as.factor(event) ~ 0+factor(center)
+                 +DON_HIST_DIAB
+                 +DON_GENDER
+                 +DON_BMI_C
+                 +DON_AGE_C4
+                 +DON_RACE
+                 +DON_HTN
+                 +REC_GENDER
+                 +REC_BMI_C
+                 +REC_COLD_ISCH_TM_20
+                 +REC_AGE_C4
+                 +REC_DIAB
+                 +REC_DIAL_YRS,
+                 data=data_nonblack, model = T)
+PseudoR2(m2, which = c("CoxSnell","Nagelkerke","McFadden"))
+
+```
+
